@@ -1,10 +1,8 @@
 #import required dependencies
 import discord
-import responses
 from discord.ext import commands
 
-#import Bot Token
-from apikeys import TOKEN
+
 
 intents = discord.Intents.default()
 intents.members = True
@@ -29,6 +27,12 @@ async def on_member_join(member):
 async def on_member_join(member):
     channel = client.get_channel(1173384679471202375)
     await channel.send(f"{member} HaS LeFt ThE CaVe :(, Press F to pay respects")
-   
-client.run(TOKEN)
     
+@client.command(pass_context = True)
+async def join(ctx):
+    if(ctx.author.voice):
+        channel = ctx.message.author.voice.channel
+        await channel.connect()
+        
+    else:
+        await ctx.send("")

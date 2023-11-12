@@ -13,7 +13,7 @@ client = commands.Bot(command_prefix="!", intents=discord.Intents.all())
 async def on_Ready():
     print(f"{client} is now online")
     print("-------------------------")
-    
+
 @client.command()
 async def hello(ctx):
     await ctx.send("Hey there :)")
@@ -28,20 +28,3 @@ async def on_member_join(member):
     channel = client.get_channel(1173384679471202375)
     await channel.send(f"{member} HaS LeFt ThE CaVe :(, Press F to pay respects")
     
-@client.command(pass_context = True)
-async def join(ctx):
-    if(ctx.author.voice):
-        channel = ctx.message.author.voice.channel
-        await channel.connect()
-        
-    else:
-        await ctx.send("You must be in a voice channel to run this command")
-        
-@client.command(pass_context = True)
-async def leave(ctx):
-    if(ctx.author.voice):
-        await ctx.guild.voice_client.disconnect()
-        await ctx.send("I have left the voice channel")
-        
-    else:
-        await ctx.send("I am not in a voice channel")

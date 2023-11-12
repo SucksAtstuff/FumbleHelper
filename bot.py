@@ -1,5 +1,25 @@
 import discord
 import responses
+from discord.ext import commands, ipc
+
+class MyBot(commands.Bot):
+
+	def __init__(self,*args,**kwargs):
+		super().__init__(*args,**kwargs)
+
+		self.ipc = ipc.Server(self,secret_key = "Swas")
+
+	async def on_ready(self):
+		"""Called upon the READY event"""
+		print("Bot is ready.")
+
+	async def on_ipc_ready(self):
+		"""Called upon the IPC Server being ready"""
+		print("Ipc server is ready.")
+
+	async def on_ipc_error(self, endpoint, error):
+		"""Called upon an error being raised within an IPC route"""
+		print(endpoint, "raised", error)
 
 async def send_message(message, user_message, is_private):
     try:
@@ -14,11 +34,7 @@ def run_discord_bot():
     intents = discord.Intents.default()
     intents.message_content = True
     client = discord.Client(intents=intents)
-    
-    @client.event
-    async def on_ready():
-        print(f"{client.user} is now running")
-        
+      
     @client.event
     async def on_message(message):
         if message.author == client.user:

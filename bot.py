@@ -1,39 +1,34 @@
+#import required dependencies
 import discord
 import responses
 from discord.ext import commands
 
-async def send_message(message, user_message, is_private):
-    try:
-        response = responses.get_response(user_message)
-        await message.author.send(response) if is_private else await message.channel.send(response)
-        
-    except Exception as e:
-        print(e)
+#import Bot Token
+from apikeys import TOKEN
 
-def run_discord_bot(): 
-    TOKEN = "MTE3MzA1MzM2MDIwMzYzNjg0Nw.GDjiG2.Bb94mDFCj-3_fPvzPx1kbLP_RPqfIfFuY6ViNs"
-    intents = discord.Intents.default()
-    intents.message_content = True
-    client = commands.Bot(command_prefix="!", intents=discord.Intents.all())
+intents = discord.Intents.default()
+intents.members = True
+
+client = commands.Bot(command_prefix="!", intents=discord.Intents.all())
+
+@client.event
+async def on_Ready():
+    print(f"{client} is now online")
+    print("-------------------------")
     
-    @client.event
-    async def on_message(message):
-        if message.author == client.user:
-            return
-        
-        username = str(message.author)
-        user_message = str(message.content)
-        channel = str(message.channel)
-        
-        print(f"{username} said {user_message} ({channel})")
-        
-        
-        if user_message[0] =="?":
-            user_message = user_message[1:]
-            await send_message(message, user_message, is_private=True)
-            
-        else:
-            await send_message(message, user_message, is_private=False)      
-    client.run(TOKEN)
+@client.command()
+async def hello(ctx):
+    await ctx.send("Hey there :)")
     
+@client.event
+async def on_member_join(member):
+    channel = client.get_channel(1173380031230259200)
+    await channel.send(f"WeLCome To the Chilly CavE {member} greEt tHeM or DeTh also bE sUre to rEaD the <#962796206721994792> and ViSit <#962844080340086834> FoR extra RoLes")
+
+@client.event
+async def on_member_join(member):
+    channel = client.get_channel(1173384679471202375)
+    await channel.send(f"{member} HaS LeFt ThE CaVe :(, Press F to pay respects")
+   
+client.run(TOKEN)
     

@@ -27,4 +27,7 @@ async def on_member_join(member):
 async def on_member_join(member):
     channel = client.get_channel(1173384679471202375)
     await channel.send(f"{member} HaS LeFt ThE CaVe :(, Press F to pay respects")
-    
+
+@client.event
+async def on_message(message):
+    print(message)

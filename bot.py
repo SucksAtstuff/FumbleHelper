@@ -2,6 +2,8 @@
 import discord
 from discord.ext import commands
 import time
+from discord import Member
+from discord.ext.commands import has_permissions, MissingPermissions
 
 
 intents = discord.Intents.default()
@@ -33,7 +35,7 @@ with open("SlurList.txt") as file: # bad-words.txt contains one blacklisted phra
     bad_words = [bad_word.strip().lower() for bad_word in file.readlines()]
 
 @client.event    
-async def on_message(message):
+async def on_message(message, member, reason=None):
     if message.author.bot:
         return
     print(message.content) #prints messages in console
@@ -48,3 +50,26 @@ async def on_message(message):
             time.sleep(1)
             await message.channel.send("1")
             
+            await member.ban(reason=reason)
+            
+@client.command()
+@has_permissions(kick_members=True)
+async def kick(ctx, member: discord.member, *, reason=None):
+    await member.kick(reason=reason)
+    await ctx.send(f"User {member} has been kicked for {reason}")
+    
+@kick.error
+async def kick_error(ctx, error):
+    if isinstance(error, commands.MissingPermissions):
+        await ctx.send("You do not have the permmisions to use this command")
+        
+@client.command()
+@has_permissions(ban_members=True)
+async def ban(ctx, member: discord.member, *, reason=None):
+    await member.ban(reason=reason)
+    await ctx.send(f"User {member} has been banned for {reason}")
+    
+@ban.error
+async def ban_error(ctx, error):
+    if isinstance(error, commands.MissingPermissions):
+        await ctx.send("You do not have the permmisions to use this command")

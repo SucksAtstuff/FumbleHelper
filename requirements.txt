@@ -1,2 +1,1 @@
 discord==1.7.3
-discord.py[voice]~=2.3.2

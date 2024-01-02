@@ -1,8 +1,11 @@
+#import required dependencies
 import discord
 from discord.ext import commands
 import time
+from discord import Member
+from discord.ext.commands import has_permissions, MissingPermissions
 
-intents = discord.Intents.default()
+intents = discord.Intents.all()
 intents.members = True
 
 client = commands.Bot(command_prefix="!", intents=intents)
@@ -15,7 +18,7 @@ async def on_ready():
 @client.event
 async def on_member_join(member):
     channel = client.get_channel(1173380031230259200)
-    await channel.send(f"Welcome to the Chilly Cave {member}! Greet them or face the consequences. Also, be sure to read the <#962796206721994792> and visit <#962844080340086834> for extra roles.")
+    await channel.send(f"WeLCome To the Chilly CavE {member}greEt tHeM or DeTh also bE sUre to rEaD the <#962796206721994792> and ViSit <#962844080340086834> FoR extra RoLes")
 
 @client.event
 async def on_member_remove(member):
@@ -29,7 +32,10 @@ with open("SlurList.txt") as file:
 async def on_message(message):
     if message.author.bot:
         return
-    print(message.content)
+
+    # Log the message in the console along with the channel
+    print(f"{message.channel} - {message.author}: {message.content}")
+
     for bad_word in bad_words:
         if bad_word in message.content:
             await message.delete()
@@ -41,22 +47,33 @@ async def on_message(message):
             time.sleep(1)
             await message.channel.send("1")
             await message.author.ban(reason="Inappropriate language")
-            # Send a direct message to the user
-            guild_name = message.guild.name if message.guild else "the server"
-            await message.author.send(f"You have been banned from {guild_name} for the following reason: {reason}")
+
+            # Try to send a direct message to the user using create_dm
+            try:
+                dm_channel = await message.author.create_dm()
+                await dm_channel.send(f"You have been banned from {message.guild.name if message.guild else 'the server'} for the following reason: {reason}")
+            except discord.Forbidden:
+                print(f"Failed to send a direct message to {message.author} (Forbidden)")
+
             return
-            
 
     await client.process_commands(message)
+
 
 @client.command()
 @commands.has_permissions(kick_members=True)
 async def kick(ctx, member: discord.Member, *, reason=None):
-    await member.kick(reason=reason)
     await ctx.send(f"User {member} has been kicked for {reason}")
-    # Send a direct message to the user
-    guild_name = ctx.guild.name if ctx.guild else "the server"
-    await member.send(f"You have been {ctx.command.name}ed from {guild_name} for the following reason: {reason}")
+    
+    # Try to send a direct message to the user using create_dm
+    try:
+        dm_channel = await member.create_dm()
+        # change the link in the message to a google form link
+        await dm_channel.send(f"You have been kicked from {ctx.guild.name if ctx.guild else 'the server'} for the following reason: {reason}: You can appeal the punishment here: https://www.youtube.com/watch?v=dQw4w9WgXcQ")
+    except discord.Forbidden:
+        print(f"Failed to send a direct message to {member} (Forbidden)")
+    
+    await member.kick(reason=reason)
 
 @kick.error
 async def kick_error(ctx, error):
@@ -66,13 +83,17 @@ async def kick_error(ctx, error):
 @client.command()
 @commands.has_permissions(ban_members=True)
 async def ban(ctx, member: discord.Member, *, reason=None):
-    await member.ban(reason=reason)
     await ctx.send(f"User {member} has been banned for {reason}")
     
-    # Send a direct message to the user
-    guild_name = ctx.guild.name if ctx.guild else "the server"
-    await member.send(f"You have been {ctx.command.name}ed from {guild_name} for the following reason: {reason}")
-
+    # Try to send a direct message to the user using create_dm
+    try:
+        dm_channel = await member.create_dm()
+        # change the link in the message to a google form link
+        await dm_channel.send(f"You have been banned from {ctx.guild.name if ctx.guild else 'the server'} for the following reason: {reason}: You can appeal the punishment here: https://www.youtube.com/watch?v=dQw4w9WgXcQ")
+    except discord.Forbidden:
+        print(f"Failed to send a direct message to {member} (Forbidden)")
+    
+    await member.ban(reason=reason)
 
 @ban.error
 async def ban_error(ctx, error):

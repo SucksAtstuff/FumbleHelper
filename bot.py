@@ -54,7 +54,6 @@ async def on_message(message):
 async def kick(ctx, member: discord.Member, *, reason=None):
     await member.kick(reason=reason)
     await ctx.send(f"User {member} has been kicked for {reason}")
-    
     # Send a direct message to the user
     guild_name = ctx.guild.name if ctx.guild else "the server"
     await member.send(f"You have been {ctx.command.name}ed from {guild_name} for the following reason: {reason}")

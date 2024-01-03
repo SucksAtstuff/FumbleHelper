@@ -14,7 +14,6 @@ welcomeChannel = 1173380031230259200
 farewellChannel = 1173384679471202375
 logChannel = 1192151818185232505
 
-
 # Set up Discord bot with command prefix "!" and enable member intents
 intents = discord.Intents.all()
 intents.members = True
@@ -86,6 +85,7 @@ def get_mod_logs(user):
 
 # Command: Display mod logs for a user in an embed
 @client.command()
+@commands.has_permissions(manage_messages=True)
 async def modlogs(ctx, user: discord.User):
     # Create an embed object with a red color
     embed = discord.Embed(
@@ -406,6 +406,7 @@ def add_note(member, note):
         file.write(f"Note: {note}\n")
 
 @client.command()
+@commands.has_permissions(manage_messages=True)
 async def note(ctx, member: discord.Member, *, note):
     # Add the note to the user's mod logs
     add_note(member, f"{ctx.author.name} added a note: {note}")
@@ -431,6 +432,7 @@ def add_warning(member, reason):
         file.write(f"Warning: {reason}\n")
         
 @client.command()
+@commands.has_permissions(manage_messages=True)
 async def warn(ctx, member: discord.Member, *, reason):
     # Add the warning to the user's mod logs
     add_warning(member, reason)
@@ -447,6 +449,7 @@ async def warn(ctx, member: discord.Member, *, reason):
 
 # Command: Send a message to a specific channel
 @client.command()
+@commands.has_permissions(administrator=True)
 async def send_message(ctx, channel_id: int, *, message: str):
     # Get the channel using the provided ID
     channel = client.get_channel(channel_id)
@@ -462,6 +465,7 @@ async def send_message(ctx, channel_id: int, *, message: str):
 
 # Command: Send a direct message to a member
 @client.command()
+@commands.has_permissions(administrator=True)
 async def send_dm(ctx, member_id: int, *, message: str):
     # Get the member using the provided ID
     member = client.get_user(member_id)

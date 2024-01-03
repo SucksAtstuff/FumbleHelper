@@ -210,11 +210,16 @@ async def on_message(message):
             # Print a message if the target channel is not found (replace with appropriate handling)
             print("Target channel not found.")
     
-    # Check for slurs in the message content
+   # Check for slurs in the message content
     for bad_word in bad_words:
         if bad_word in message.content:
             # Delete the message
             await message.delete()
+            
+            # Check if the bot's role is lower or equal to the member's role
+            if message.guild.me.top_role <= message.author.top_role:
+                await message.channel.send("I cannot ban this user as they have a higher or equal role to me.")
+                return
 
             # Inform the user about the server rules
             await message.channel.send("Slurs are strictly against this server's rules. You will be banned.")
@@ -229,6 +234,7 @@ async def on_message(message):
             try:
                 dm_channel = await message.author.create_dm()
                 await dm_channel.send(f"You have been banned from {message.guild.name if message.guild else 'the server'} for the following reason: Said a slur, you can appeal the ban here: {appealLink}")
+                print(f"DM sent to {message.author} for slur ban confirmation.")
             except discord.Forbidden:
                 print(f"Failed to send a direct message to {message.author} (Forbidden)")
 
@@ -257,9 +263,6 @@ async def log_message_deletion(message):
     content = message.content
     channel = message.channel
 
-    # Define the issuer as the user who deleted the message
-    issuer = f"{user.name}#{user.discriminator}"
-
     # Specify the folder path and file path for message deletion logs
     folder_path = os.path.join(MODLOGS_FOLDER, username)
     file_path = os.path.join(folder_path, f"{username}_message_deletions.txt")
@@ -271,7 +274,7 @@ async def log_message_deletion(message):
     # Log the message deletion details to the user's message deletion log file
     with open(file_path, "a") as file:
         # Write timestamp, issuer, and user information
-        file.write(f"{timestamp} - Deleted by {issuer} - User ID: {user_id} - Channel: {channel.name}\n")
+        file.write(f"{timestamp} - Message by {user} - User ID: {user_id} - Channel: {channel.name}\n")
         # Write the content of the deleted message
         file.write(f"Content: {content}\n\n")
 
@@ -290,7 +293,6 @@ async def log_message_deletion(message):
         embed.add_field(name="User", value=f"{user.mention} ({user_id})", inline=False)
         embed.add_field(name="Channel", value=f"{channel.mention}", inline=False)
         embed.add_field(name="Content", value=content, inline=False)
-        embed.add_field(name="Deleted by", value=issuer, inline=False)
         
         # Add the timestamp as a small field in the bottom left corner
         embed.set_footer(text=timestamp, icon_url="")  # You can add an icon URL if needed
@@ -408,6 +410,16 @@ async def kick_error(ctx, error):
 @client.command()
 @commands.has_permissions(ban_members=True)
 async def ban(ctx, member: discord.Member, *, reason="Broke the rules"):
+    # Check if the bot's role is lower or equal to the member's role
+    if ctx.guild.me.top_role <= member.top_role:
+        await ctx.send("I cannot ban this user because they have a higher or equal role.")
+        return
+
+    # Check if the command issuer's role is lower or equal to the member's role
+    if ctx.author.top_role <= member.top_role:
+        await ctx.send("You do not have the authority to ban this user.")
+        return
+    
     # Inform about the ban
     await ctx.send(f"User {member} has been banned for {reason}")
 

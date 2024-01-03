@@ -30,7 +30,7 @@ async def on_ready():
 async def on_member_join(member):
     # Get the welcome channel by ID and send a welcome message with instructions
     channel = client.get_channel(welcomeChannel)
-    await channel.send(f"WeLCome To the Chilly CavE {member} greEt tHeM or DeTh also bE sUre to rEaD the <#962796206721994792> and ViSit <#962844080340086834> FoR extra RoLes")
+    await channel.send(f"WeLCome To the Chilly CavE {member.mention} greEt tHeM or DeTh also bE sUre to rEaD the <#962796206721994792> and ViSit <#962844080340086834> FoR extra RoLes")
 
 # Event: When a member leaves the server
 @client.event
@@ -38,6 +38,20 @@ async def on_member_remove(member):
     # Get the farewell channel by ID and send a message when a member leaves
     channel = client.get_channel(farewellChannel)
     await channel.send(f"{member} HaS LeFt ThE CaVe :(. Press F to pay respects.")
+
+@client.event
+async def on_boost(ctx, boost):
+    # Get the channel where you want to send a message about the boost
+    boost_channel_id = welcomeChannel  # Replace with the actual channel ID
+    boost_channel = client.get_channel(boost_channel_id)
+
+    if boost_channel:
+        # Send a message in the boost channel
+        await boost_channel.send(f"Thank you, {boost.user.mention}, for boosting {boost.guild.name} :D")
+    else:
+        # Print a message or log an error if the boost channel is not found
+        print("Boost channel not found.")
+
 
 # Read the list of slurs from "SlurList.txt" and store in bad_words list
 with open("SlurList.txt") as file:

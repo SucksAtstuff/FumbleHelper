@@ -1,7 +1,10 @@
 import bot
+from dotenv import load_dotenv
+import os
 
-#import Bot Token
-from apikeys import TOKEN
+load_dotenv()  # Load variables from .env file
+
+TOKEN = os.environ.get("DISCORD_TOKEN")
 
 if __name__ == "__main__":
     bot.client.run(TOKEN)

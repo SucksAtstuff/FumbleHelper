@@ -50,7 +50,7 @@ async def on_member_remove(member):
     
 # Function: Log a member join or leave event
 async def log_member_change(member, event_type, client):
-   # Get the current timestamp in the specified format
+    # Get the current timestamp in the specified format
     timestamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
 
     # Extract relevant information about the member
@@ -83,15 +83,23 @@ async def log_member_change(member, event_type, client):
         server = member.guild
         member_count = server.member_count
 
+        # Customize the embed color based on the event type
+        if event_type.lower() == 'join':
+            embed_color = 0x2ecc71  # Green color for join
+        elif event_type.lower() == 'leave':
+            embed_color = 0xe74c3c  # Red color for leave
+        else:
+            embed_color = 0x3498db  # Default blue color
+
         # Create an embed with information about the member change
         embed = discord.Embed(
             title=f"Member {event_type.capitalize()}",
-            color=0x3498db  # You can customize the color
+            color=embed_color
         )
         embed.add_field(name="User", value=f"{member.mention} ({user_id})", inline=False)
         embed.add_field(name="Event Type", value=event_type.capitalize(), inline=False)
-        embed.add_field(name="Issuer", value=issuer, inline=False)
-        embed.add_field(name="New Member Count", value=member_count, inline=False)
+        
+        embed.add_field(name="Members", value=member_count, inline=False)
 
         # Add the timestamp as a small field in the bottom left corner
         embed.set_footer(text=timestamp, icon_url="")  # You can add an icon URL if needed
@@ -101,6 +109,7 @@ async def log_member_change(member, event_type, client):
     else:
         # Print an error message if the log channel is not found
         print(f"Log channel not found. Make sure the log_channel_id is set correctly.")
+
 
 
 @client.event
@@ -230,6 +239,142 @@ async def on_message(message):
 
     # Process other commands in the message
     await client.process_commands(message)
+
+@client.event
+async def on_message_delete(message):
+    await log_message_deletion(message)
+
+
+# Function: Log a message deletion event
+async def log_message_deletion(message):
+    # Get the current timestamp in UTC format
+    timestamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+
+    # Extract relevant information about the deleted message
+    user = message.author
+    username = user.name
+    user_id = user.id
+    content = message.content
+    channel = message.channel
+
+    # Define the issuer as the user who deleted the message
+    issuer = f"{user.name}#{user.discriminator}"
+
+    # Specify the folder path and file path for message deletion logs
+    folder_path = os.path.join(MODLOGS_FOLDER, username)
+    file_path = os.path.join(folder_path, f"{username}_message_deletions.txt")
+
+    # Ensure the folder exists, create it if not
+    if not os.path.exists(folder_path):
+        os.makedirs(folder_path)
+
+    # Log the message deletion details to the user's message deletion log file
+    with open(file_path, "a") as file:
+        # Write timestamp, issuer, and user information
+        file.write(f"{timestamp} - Deleted by {issuer} - User ID: {user_id} - Channel: {channel.name}\n")
+        # Write the content of the deleted message
+        file.write(f"Content: {content}\n\n")
+
+    # Send an embed to the log channel
+    log_channel_id = logChannel  # Replace with the actual log channel ID
+    log_channel = client.get_channel(log_channel_id)
+
+    # Check if the log channel exists
+    if log_channel:
+        # Create an embed with information about the deleted message
+        embed = discord.Embed(
+            title="Message Deleted",
+            color=0xe74c3c  # You can customize the color
+        )
+        # Add fields to the embed for user, channel, content, issuer, and timestamp
+        embed.add_field(name="User", value=f"{user.mention} ({user_id})", inline=False)
+        embed.add_field(name="Channel", value=f"{channel.mention}", inline=False)
+        embed.add_field(name="Content", value=content, inline=False)
+        embed.add_field(name="Deleted by", value=issuer, inline=False)
+        
+        # Add the timestamp as a small field in the bottom left corner
+        embed.set_footer(text=timestamp, icon_url="")  # You can add an icon URL if needed
+
+        # Send the embed to the log channel
+        await log_channel.send(embed=embed)
+    else:
+        # Print an error message if the log channel is not found
+        print(f"Log channel not found. Make sure the log_channel_id is set correctly.")
+
+# Event: When a message is edited
+@client.event
+async def on_message_edit(before, after):
+    # Check if the content of the message has changed
+    if before.content != after.content:
+        # Get the log channel by ID
+        log_channel_id = logChannel  # Replace with the actual log channel ID
+        log_channel = client.get_channel(log_channel_id)
+
+        # Check if the log channel exists
+        if log_channel:
+            # Create an embed with information about the edited message
+            embed = discord.Embed(
+                title="Message Edited",
+                color=0xf1c40f  # You can customize the color
+            )
+            embed.add_field(name="User", value=f"{before.author.mention} ({before.author.id})", inline=False)
+            embed.add_field(name="Before", value=before.content, inline=False)
+            embed.add_field(name="After", value=after.content, inline=False)
+
+            # Add the timestamp as a small field in the bottom left corner
+            timestamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+            embed.set_footer(text=timestamp, icon_url="")  # You can add an icon URL if needed
+
+            # Send the embed to the log channel
+            await log_channel.send(embed=embed)
+        else:
+            # Print an error message if the log channel is not found
+            print(f"Log channel not found. Make sure the log_channel_id is set correctly.")
+
+# Function: Log a member role change event
+async def log_role_change(member, added_roles, client):
+    # Get the current timestamp in the specified format
+    timestamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+
+    # Extract relevant information about the member
+    username = member.name  # Username of the member
+    user_id = member.id  # User ID of the member
+
+    # Specify the folder path and file path for role change logs
+    folder_path = os.path.join(MODLOGS_FOLDER, username)
+    file_path = os.path.join(folder_path, f"{username}_role_changes.txt")
+
+    # Ensure the folder exists, create it if not
+    if not os.path.exists(folder_path):
+        os.makedirs(folder_path)
+
+    # Log the role change details to the user's role change log file
+    with open(file_path, "a") as file:
+        file.write(f"{timestamp} - User ID: {user_id}, Roles Added: {', '.join(added_roles)}\n")
+
+    # Send an embed to the log channel
+    log_channel_id = logChannel  # Replace with the actual log channel ID
+    log_channel = client.get_channel(log_channel_id)
+
+    # Check if the log channel exists
+    if log_channel:
+        # Create an embed with information about the role change
+        embed = discord.Embed(
+            title=f"Role Change - {member.mention}",
+            color=0xffcc00  # Yellow color
+        )
+        embed.add_field(name="User", value=f"{member.mention} ({user_id})", inline=False)
+        embed.add_field(name="Roles Added", value=", ".join([f"<@&{role}>" for role in added_roles]), inline=False)
+        embed.add_field(name="Timestamp", value=timestamp, inline=False)
+
+        # Send the embed to the log channel
+        await log_channel.send(embed=embed)
+    else:
+        # Print an error message if the log channel is not found
+        print(f"Log channel not found. Make sure the log_channel_id is set correctly.")
+
+
+
 
 # Command: Kick a member from the server
 @client.command()

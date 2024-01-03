@@ -426,3 +426,33 @@ async def warn(ctx, member: discord.Member, *, reason):
 
     # Send a confirmation message
     await ctx.send(f"User {member.name} has been warned for: {reason}")
+
+# Command: Send a message to a specific channel
+@client.command()
+async def send_message(ctx, channel_id: int, *, message: str):
+    # Get the channel using the provided ID
+    channel = client.get_channel(channel_id)
+
+    if channel:
+        # Send the message to the specified channel
+        await channel.send(message)
+        # Send a confirmation message to the command invoker
+        await ctx.send(f"Message sent to <#{channel_id}>: {message}")
+    else:
+        # If the channel is not found, inform the user
+        await ctx.send("Channel not found.")
+
+# Command: Send a direct message to a member
+@client.command()
+async def send_dm(ctx, member_id: int, *, message: str):
+    # Get the member using the provided ID
+    member = client.get_user(member_id)
+
+    if member:
+        # Send a direct message to the member
+        await member.send(message)
+        # Send a confirmation message to the command invoker
+        await ctx.send(f"Direct message sent to {member.name}: {message}")
+    else:
+        # If the member is not found, inform the user
+        await ctx.send("Member not found.")

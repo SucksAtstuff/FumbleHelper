@@ -25,9 +25,15 @@ async def on_ready():
     print(f"{client.user} is now online")
     print("-------------------------")
 
+
+
+
 # Event: When a new member joins the server
 @client.event
 async def on_member_join(member):
+    # Log the member join event
+    await log_member_change(member, "join", client)
+    
     # Get the welcome channel by ID and send a welcome message with instructions
     channel = client.get_channel(welcomeChannel)
     await channel.send(f"WeLCome To the Chilly CavE {member.mention} greEt tHeM or DeTh also bE sUre to rEaD the <#962796206721994792> and ViSit <#962844080340086834> FoR extra RoLes")
@@ -35,9 +41,67 @@ async def on_member_join(member):
 # Event: When a member leaves the server
 @client.event
 async def on_member_remove(member):
+    # Log the member leave event
+    await log_member_change(member, "leave", client)
+    
     # Get the farewell channel by ID and send a message when a member leaves
     channel = client.get_channel(farewellChannel)
     await channel.send(f"{member} HaS LeFt ThE CaVe :(. Press F to pay respects.")
+    
+# Function: Log a member join or leave event
+async def log_member_change(member, event_type, client):
+   # Get the current timestamp in the specified format
+    timestamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+
+    # Extract relevant information about the member
+    username = member.name  # Username of the member
+    user_id = member.id  # User ID of the member
+
+    # Define the issuer, in this case, set to "System"
+    # You can customize this or get the actual invoker if available
+    issuer = "System"
+
+    # Specify the folder path and file path for member change logs
+    folder_path = os.path.join(MODLOGS_FOLDER, username)
+    file_path = os.path.join(folder_path, f"{username}_member_changes.txt")
+
+    # Ensure the folder exists, create it if not
+    if not os.path.exists(folder_path):
+        os.makedirs(folder_path)
+
+    # Log the member change details to the user's member change log file
+    with open(file_path, "a") as file:
+        file.write(f"{timestamp} - {event_type.capitalize()} by {issuer} - User ID: {user_id}\n")
+
+    # Send an embed to the log channel
+    log_channel_id = logChannel  # Replace with the actual log channel ID
+    log_channel = client.get_channel(log_channel_id)
+
+    # Check if the log channel exists
+    if log_channel:
+        # Get the server's current member count
+        server = member.guild
+        member_count = server.member_count
+
+        # Create an embed with information about the member change
+        embed = discord.Embed(
+            title=f"Member {event_type.capitalize()}",
+            color=0x3498db  # You can customize the color
+        )
+        embed.add_field(name="User", value=f"{member.mention} ({user_id})", inline=False)
+        embed.add_field(name="Event Type", value=event_type.capitalize(), inline=False)
+        embed.add_field(name="Issuer", value=issuer, inline=False)
+        embed.add_field(name="New Member Count", value=member_count, inline=False)
+
+        # Add the timestamp as a small field in the bottom left corner
+        embed.set_footer(text=timestamp, icon_url="")  # You can add an icon URL if needed
+
+        # Send the embed to the log channel
+        await log_channel.send(embed=embed)
+    else:
+        # Print an error message if the log channel is not found
+        print(f"Log channel not found. Make sure the log_channel_id is set correctly.")
+
 
 @client.event
 async def on_boost(ctx, boost):

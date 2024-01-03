@@ -1,9 +1,10 @@
 # Import necessary libraries
 import discord
+from discord import Game, Streaming
 from discord.ext import commands
-import time
 from discord import Member
 from discord.ext.commands import has_permissions, MissingPermissions
+import time
 import asyncio
 import re
 import datetime
@@ -19,6 +20,9 @@ client = commands.Bot(command_prefix="!", intents=intents)
 async def on_ready():
     print(f"{client.user} is now online")
     print("-------------------------")
+
+ # Set the bot's activity to a streaming status
+    await client.change_presence(activity=Streaming(name="IsuckAtEverything", url="https://www.youtube.com/channel/UC0d3aKdb79uCZzkV6g6Xu6A"))
 
 # Event: When a new member joins the server
 @client.event

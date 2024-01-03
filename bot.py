@@ -1,6 +1,5 @@
 # Import necessary libraries
 import discord
-from discord import Game, Streaming
 from discord.ext import commands
 from discord import Member
 from discord.ext.commands import has_permissions, MissingPermissions
@@ -9,6 +8,12 @@ import asyncio
 import re
 import datetime
 import os
+
+appealLink = "https://forms.gle/rMdFUi5J8uHqf4jV9"
+welcomeChannel = 1173380031230259200
+farewellChannel = 1173384679471202375
+logChannel = 1192151818185232505
+
 
 # Set up Discord bot with command prefix "!" and enable member intents
 intents = discord.Intents.all()
@@ -21,21 +26,18 @@ async def on_ready():
     print(f"{client.user} is now online")
     print("-------------------------")
 
- # Set the bot's activity to a streaming status
-    await client.change_presence(activity=Streaming(name="IsuckAtEverything", url="https://www.youtube.com/channel/UC0d3aKdb79uCZzkV6g6Xu6A"))
-
 # Event: When a new member joins the server
 @client.event
 async def on_member_join(member):
     # Get the welcome channel by ID and send a welcome message with instructions
-    channel = client.get_channel(1173380031230259200)
+    channel = client.get_channel(welcomeChannel)
     await channel.send(f"WeLCome To the Chilly CavE {member} greEt tHeM or DeTh also bE sUre to rEaD the <#962796206721994792> and ViSit <#962844080340086834> FoR extra RoLes")
 
 # Event: When a member leaves the server
 @client.event
 async def on_member_remove(member):
     # Get the farewell channel by ID and send a message when a member leaves
-    channel = client.get_channel(1173384679471202375)
+    channel = client.get_channel(farewellChannel)
     await channel.send(f"{member} HaS LeFt ThE CaVe :(. Press F to pay respects.")
 
 # Read the list of slurs from "SlurList.txt" and store in bad_words list
@@ -109,6 +111,18 @@ async def on_message(message):
     # Log the message in the console along with the channel
     print(f"{message.channel} - {message.author}: {message.content}")
 
+    # Check if the message is from a DM (Direct Message)
+    if isinstance(message.channel, discord.DMChannel):
+        # Get the target channel by ID (replace CHANNEL_ID with your channel ID)
+        target_channel = client.get_channel(logChannel)
+
+        if target_channel:
+            # Send the message to the specified channel
+            await target_channel.send(f"DM from {message.author}: {message.content}")
+        else:
+            # Print a message if the target channel is not found (replace with appropriate handling)
+            print("Target channel not found.")
+    
     # Check for slurs in the message content
     for bad_word in bad_words:
         if bad_word in message.content:
@@ -127,7 +141,7 @@ async def on_message(message):
             # Try to send a direct message to the user using create_dm
             try:
                 dm_channel = await message.author.create_dm()
-                await dm_channel.send(f"You have been banned from {message.guild.name if message.guild else 'the server'} for the following reason: Said a slur")
+                await dm_channel.send(f"You have been banned from {message.guild.name if message.guild else 'the server'} for the following reason: Said a slur, you can appeal the ban here: {appealLink}")
             except discord.Forbidden:
                 print(f"Failed to send a direct message to {message.author} (Forbidden)")
 
@@ -150,7 +164,7 @@ async def kick(ctx, member: discord.Member, *, reason="Broke the rules"):
     try:
         dm_channel = await member.create_dm()
         # change the link in the message to a google form link
-        await dm_channel.send(f"You have been kicked from {ctx.guild.name if ctx.guild else 'the server'} for the following reason: {reason}: You can appeal the punishment here: https://www.youtube.com/watch?v=dQw4w9WgXcQ")
+        await dm_channel.send(f"You have been kicked from {ctx.guild.name if ctx.guild else 'the server'} for the following reason: {reason}: You can appeal the punishment here: {appealLink}")
         print(f"DM sent to {member} for kick confirmation.")
     except discord.Forbidden:
         print(f"Failed to send a direct message to {member}")
@@ -178,7 +192,7 @@ async def ban(ctx, member: discord.Member, *, reason="Broke the rules"):
     try:
         dm_channel = await member.create_dm()
         # change the link in the message to a google form link
-        await dm_channel.send(f"You have been banned from {ctx.guild.name if ctx.guild else 'the server'} for the following reason: {reason}: You can appeal the punishment here: https://www.youtube.com/watch?v=dQw4w9WgXcQ")
+        await dm_channel.send(f"You have been banned from {ctx.guild.name if ctx.guild else 'the server'} for the following reason: {reason}: You can appeal the punishment here: {appealLink}")
         print(f"DM sent to {member} for ban confirmation.")
     except discord.Forbidden:
         print(f"Failed to send a direct message to {member} (Forbidden)")
@@ -288,7 +302,7 @@ async def mute(ctx, member: discord.Member, *, duration_and_reason: str = None):
             # Send a DM to the muted member
             try:
                 dm_channel = await member.create_dm()
-                await dm_channel.send(f"You have been muted in {ctx.guild.name if ctx.guild else 'the server'} for {duration}.{' Reason: ' + reason if reason else ''}")
+                await dm_channel.send(f"You have been muted in {ctx.guild.name if ctx.guild else 'the server'} for {duration}.{' Reason: ' + reason if reason else ''} you can appeal the mute here: {appealLink}")
                 print(f"DM sent to {member} for mute confirmation.")
             except discord.Forbidden:
                 print(f"Failed to send a direct message to {member} (Forbidden).")

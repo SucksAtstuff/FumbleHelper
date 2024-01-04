@@ -1,15 +1,16 @@
 # FumbleHelper
 
-A personal discord bot for my discord server Succ's Chilly Cave
+A personal Discord bot for my Discord server Succ's Chilly Cave.
 
-At the moment this bot is private and only for said server
+At the moment, this bot is private and only for the said server.
 
-It might be public and usable for everyone in the future
+It might be public and usable for everyone in the future.
 
-Future plans:
-Web panel,
-Permission handler,
-Automod,
-Reaction roles,
-GiveawayBot,
-Ticket tool
+## Future Plans
+
+- Web panel
+- Permission handler
+- Automod
+- Reaction roles
+- GiveawayBot
+- Ticket tool

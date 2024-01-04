@@ -517,19 +517,11 @@ async def unban_error(ctx, error):
         await ctx.send("Please provide the full username (including discriminator) or user ID of the user you want to unban.")
         
 # Commands: note ===============================================================
-   
+
 @client.command()
 @commands.has_permissions(manage_messages=True)
 async def note(ctx, member: discord.Member, *, note):
-    # Add the note to the user's mod logs
-    add_note(member, f"{ctx.author.name} added a note: {note}")
-
-    # Send a DM to the user
-    try:
-        dm_channel = await member.create_dm()
-        await dm_channel.send(f"A note has been added to your mod logs in {ctx.guild.name if ctx.guild else 'the server'}: {note}")
-    except discord.Forbidden:
-        print(f"Failed to send a direct message to {member} (Forbidden).")
+    add_note(ctx, member, note)
 
     # Send a confirmation message
     await ctx.send(f"Note added for {member.name}: {note}")
@@ -648,8 +640,7 @@ async def unmute_error(ctx, error):
 @client.command()
 @commands.has_permissions(manage_messages=True)
 async def warn(ctx, member: discord.Member, *, reason):
-    # Add the warning to the user's mod logs
-    add_warning(member, reason)
+    add_warning(ctx, member, reason)
 
     # Send a DM to the warned user
     try:
@@ -686,7 +677,7 @@ async def send_message(ctx, channel_id: int, *, message: str):
 @commands.has_permissions(administrator=True)
 async def send_dm(ctx, member_id: int, *, message: str):
     # Get the member using the provided ID
-    member = client.get_member(member_id)
+    member = ctx.guild.get_member(member_id)
 
     if member:
         # Send a direct message to the member
@@ -770,22 +761,29 @@ async def auto_unmute(ctx, member, seconds):
             print(f"Failed to send a direct message to {member} (Forbidden).")
 
 # Functions: Add note ==========================================================
+def add_note(ctx, member, note):
+    # Convert mention to member object
+    if isinstance(member, str):
+        member_id = int(member.replace('<@', '').replace('>', ''))
+        member = ctx.guild.get_member(member_id)
 
-# Define a function to add a note to a user's mod logs
-def add_note(member, note):
     # Log the note
-    log_punishment(member, "Note", note)
+    log_punishment(ctx, member, "Note", note)
 
     # Add the note to the user's mod logs file
     with open(f"{MODLOGS_FOLDER}/{member.name}/{member.name}_punishments.txt", "a") as file:
         file.write(f"Note: {note}\n")
-
+        
 # Functions: Add warning =======================================================
+# Functions: Add warning =======================================================
+def add_warning(ctx, member, reason):
+    # Convert mention to member object
+    if isinstance(member, str):
+        member_id = int(member.replace('<@', '').replace('>', ''))
+        member = ctx.guild.get_member(member_id)
 
-# Define a function to add a warning to a user's mod logs
-def add_warning(member, reason):
-    # Log the warningf
-    log_punishment(member, "Warning", reason)
+    # Log the warning
+    log_punishment(ctx, member, "Warning", reason)
 
     # Add the warning to the user's mod logs file
     with open(f"{MODLOGS_FOLDER}/{member.name}/{member.name}_punishments.txt", "a") as file:

@@ -1,10 +1,12 @@
 # FumbleHelper
 
-A personal Discord bot for my Discord server Succ's Chilly Cave.
+A personal Discord bot designed for my Discord server, Succ's Chilly Cave.
 
-At the moment, this bot is private and only for the said server.
+Currently, the bot is private and exclusive to the aforementioned server.
 
-It might be public and usable for everyone in the future.
+There is a possibility that it may become public and accessible to everyone in the future.
+
+While the bot is technically open source, as in you can freely read all the code it's important to note that this doesn't grant permission for anyone to indiscriminately copy and use it as their own.
 
 ## Future Plans
 

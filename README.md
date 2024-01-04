@@ -11,6 +11,7 @@ It might be public and usable for everyone in the future.
 - Web panel
 - Permission handler
 - Automod
+- Manual Moderation x
 - Reaction roles
 - GiveawayBot
 - Ticket tool

@@ -2,14 +2,16 @@
 import discord
 from discord.ext import commands
 from discord import Member
+from discord import Role
 from discord.ext.commands import has_permissions, MissingPermissions
+
 import time
 import asyncio
 import re
 import datetime
 import os
 
-appealLink = "https://forms.gle/rMdFUi5J8uHqf4jV9"
+appealLink = "https://forms.gle/rMdFUi5J8uHqf4jV9" 
 welcomeChannel = 1173380031230259200
 farewellChannel = 1173384679471202375
 logChannel = 1192151818185232505
@@ -19,14 +21,27 @@ intents = discord.Intents.all()
 intents.members = True
 client = commands.Bot(command_prefix="!", intents=intents)
 
+
+# ==============================================================================
+# Event Handling:
+# ==============================================================================
+
+# Event Handling: Bot startup ================================================
+
 # Event: When the bot is ready
 @client.event
 async def on_ready():
     print(f"{client.user} is now online")
     print("-------------------------")
 
+# Functions: Open slur list ====================================================
 
+# Read the list of slurs from "SlurList.txt" and store in bad_words list
+with open("SlurList.txt") as file:
+    # Remove leading/trailing whitespaces and convert to lowercase for case-insensitive comparison
+    bad_words = [bad_word.strip().lower() for bad_word in file.readlines()]
 
+# Event Handling: Member join ==================================================
 
 # Event: When a new member joins the server
 @client.event
@@ -38,6 +53,8 @@ async def on_member_join(member):
     channel = client.get_channel(welcomeChannel)
     await channel.send(f"WeLCome To the Chilly CavE {member.mention} greEt tHeM or DeTh also bE sUre to rEaD the <#962796206721994792> and ViSit <#962844080340086834> FoR extra RoLes")
 
+# Event Handling: Member remove ================================================
+
 # Event: When a member leaves the server
 @client.event
 async def on_member_remove(member):
@@ -47,8 +64,99 @@ async def on_member_remove(member):
     # Get the farewell channel by ID and send a message when a member leaves
     channel = client.get_channel(farewellChannel)
     await channel.send(f"{member} HaS LeFt ThE CaVe :(. Press F to pay respects.")
+
+# Event Handling: Member update ================================================
+
+@client.event
+async def on_member_update(before, after):
+    # Check for role changes
+    if before.roles != after.roles:
+        # Determine added roles
+        added_roles = [role for role in after.roles if role not in before.roles]
+
+        # Call your log_role_change function
+        await log_role_change(after, added_roles, client)
+
+# Event Handling: Server boost =================================================
+
+@client.event
+async def on_boost(ctx, boost):
+    # Get the channel where you want to send a message about the boost
+    boost_channel_id = welcomeChannel  # Replace with the actual channel ID
+    boost_channel = client.get_channel(boost_channel_id)
+
+    if boost_channel:
+        # Send a message in the boost channel
+        await boost_channel.send(f"Thank you, {boost.member.mention}, for boosting {boost.guild.name} :D")
+    else:
+        # Print a message or log an error if the boost channel is not found
+        print("Boost channel not found.")
+        
+        
+# Event Handling: Message sent =================================================
+
+# Event: When a message is sent in a channel
+@client.event
+async def on_message(message):
+    if message.author.bot:
+        return  # Ignore messages from other bots
+
+    # Log the message in the console along with the channel
+    print(f"{message.channel} - {message.author}: {message.content}")
+
+    # Check if the message is from a DM (Direct Message)
+    if isinstance(message.channel, discord.DMChannel):
+        # Get the target channel by ID (replace CHANNEL_ID with your channel ID)
+        target_channel = client.get_channel(logChannel)
+
+        if target_channel:
+            # Send the message to the specified channel
+            await target_channel.send(f"DM from {message.author.mention}: {message.content}")
+        else:
+            # Print a message if the target channel is not found (replace with appropriate handling)
+            print("Target channel not found.")
     
-# Function: Log a member join or leave event
+   # Check for slurs in the message content
+    for bad_word in bad_words:
+        if bad_word in message.content:
+            # Delete the message
+            await message.delete()
+            
+            # Check if the bot's role is lower or equal to the member's role
+            if message.guild.me.top_role <= message.author.top_role:
+                await message.channel.send("I cannot ban this member as they have a higher or equal role to me.")
+                return
+
+            # Inform the member about the server rules
+            await message.channel.send("Slurs are strictly against this server's rules. You will be banned.")
+            time.sleep(1)
+            await message.channel.send("3")
+            time.sleep(1)
+            await message.channel.send("2")
+            time.sleep(1)
+            await message.channel.send("1")
+
+            # Try to send a direct message to the member using create_dm
+            try:
+                dm_channel = await message.author.create_dm()
+                await dm_channel.send(f"You have been banned from {message.guild.name if message.guild else 'the server'} for the following reason: Said a slur, you can appeal the ban here: {appealLink}")
+                print(f"DM sent to {message.author} for slur ban confirmation.")
+            except discord.Forbidden:
+                print(f"Failed to send a direct message to {message.author} (Forbidden)")
+
+            # Ban the member
+            await message.author.ban(reason="Said a slur")
+
+            return
+
+    # Process other commands in the message
+    await client.process_commands(message)
+
+
+# ==============================================================================
+# Mod Logs and File Handling
+# ==============================================================================
+
 async def log_member_change(member, event_type, client):
     # Get the current timestamp in the specified format
     timestamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
@@ -57,7 +165,7 @@ async def log_member_change(member, event_type, client):
     username = member.name  # Username of the member
     member_id = member.id  # User ID of the member
 
-    # Define the issuer, in this case, set to "System"
+    # Define the issuer, in this case, set to "member.mention"
     # You can customize this or get the actual invoker if available
     issuer = member.mention
 
@@ -72,6 +180,7 @@ async def log_member_change(member, event_type, client):
     # Log the member change details to the member's member change log file
     with open(file_path, "a") as file:
         file.write(f"{timestamp} - {event_type.capitalize()} by {issuer} - User ID: {member_id}\n")
+        
 
     # Send an embed to the log channel
     log_channel_id = logChannel  # Replace with the actual log channel ID
@@ -109,27 +218,6 @@ async def log_member_change(member, event_type, client):
     else:
         # Print an error message if the log channel is not found
         print(f"Log channel not found. Make sure the log_channel_id is set correctly.")
-
-
-
-@client.event
-async def on_boost(ctx, boost):
-    # Get the channel where you want to send a message about the boost
-    boost_channel_id = welcomeChannel  # Replace with the actual channel ID
-    boost_channel = client.get_channel(boost_channel_id)
-
-    if boost_channel:
-        # Send a message in the boost channel
-        await boost_channel.send(f"Thank you, {boost.member.mention}, for boosting {boost.guild.name} :D")
-    else:
-        # Print a message or log an error if the boost channel is not found
-        print("Boost channel not found.")
-
-
-# Read the list of slurs from "SlurList.txt" and store in bad_words list
-with open("SlurList.txt") as file:
-    # Remove leading/trailing whitespaces and convert to lowercase for case-insensitive comparison
-    bad_words = [bad_word.strip().lower() for bad_word in file.readlines()]
 
 # Define the folder name for mod logs
 MODLOGS_FOLDER = "Modlogs"
@@ -170,81 +258,7 @@ def get_mod_logs(member):
     else:
         return "No mod logs found for this member."
 
-# Command: Display mod logs for a user in an embed
-@client.command()
-@commands.has_permissions(manage_messages=True)
-async def modlogs(ctx, member: discord.Member):
-    # Create an embed object with a red color
-    embed = discord.Embed(
-        title=f"Mod Logs for {member.name}",
-        color=0xe74c3c  # Red color
-    )
 
-    # Retrieve mod logs for the member
-    logs = get_mod_logs(member)
-
-    # Add mod logs to the embed
-    embed.add_field(name="Mod Logs", value=logs)
-
-    # Send the embed to the same channel
-    await ctx.send(embed=embed)
-
-# Event: When a message is sent in a channel
-@client.event
-async def on_message(message):
-    if message.author.bot:
-        return  # Ignore messages from other bots
-
-    # Log the message in the console along with the channel
-    print(f"{message.channel} - {message.author}: {message.content}")
-
-    # Check if the message is from a DM (Direct Message)
-    if isinstance(message.channel, discord.DMChannel):
-        # Get the target channel by ID (replace CHANNEL_ID with your channel ID)
-        target_channel = client.get_channel(logChannel)
-
-        if target_channel:
-            # Send the message to the specified channel
-            await target_channel.send(f"DM from {message.author}: {message.content}")
-        else:
-            # Print a message if the target channel is not found (replace with appropriate handling)
-            print("Target channel not found.")
-    
-   # Check for slurs in the message content
-    for bad_word in bad_words:
-        if bad_word in message.content:
-            # Delete the message
-            await message.delete()
-            
-            # Check if the bot's role is lower or equal to the member's role
-            if message.guild.me.top_role <= message.author.top_role:
-                await message.channel.send("I cannot ban this member as they have a higher or equal role to me.")
-                return
-
-            # Inform the member about the server rules
-            await message.channel.send("Slurs are strictly against this server's rules. You will be banned.")
-            time.sleep(1)
-            await message.channel.send("3")
-            time.sleep(1)
-            await message.channel.send("2")
-            time.sleep(1)
-            await message.channel.send("1")
-
-            # Try to send a direct message to the member using create_dm
-            try:
-                dm_channel = await message.author.create_dm()
-                await dm_channel.send(f"You have been banned from {message.guild.name if message.guild else 'the server'} for the following reason: Said a slur, you can appeal the ban here: {appealLink}")
-                print(f"DM sent to {message.author} for slur ban confirmation.")
-            except discord.Forbidden:
-                print(f"Failed to send a direct message to {message.author} (Forbidden)")
-
-            # Ban the member
-            await message.author.ban(reason="Said a slur")
-
-            return
-
-    # Process other commands in the message
-    await client.process_commands(message)
 
 @client.event
 async def on_message_delete(message):
@@ -289,19 +303,19 @@ async def log_message_deletion(message):
             title="Message Deleted",
             color=0xe74c3c  # You can customize the color
         )
-        # Add fields to the embed for user, channel, content, issuer, and timestamp
-        embed.add_field(name="User", value=f"{member.mention} ({member_id})", inline=False)
-        embed.add_field(name="Channel", value=f"{channel.mention}", inline=False)
-        embed.add_field(name="Content", value=content, inline=False)
         
-        # Add the timestamp as a small field in the bottom left corner
-        embed.set_footer(text=timestamp, icon_url="")  # You can add an icon URL if needed
+        embed.add_field(name="Channel", value=f"{channel.mention} ({channel.name})", inline=False)
+        embed.add_field(name="Message ID", value=f"[{message.id}](https://discordapp.com/channels/{message.guild.id}/{channel.id}/{message.id})", inline=False)
+        embed.add_field(name="Message Author", value=f"{member.mention} ({member_id})", inline=False)
+        embed.add_field(name="Message", value=content, inline=False)
+        embed.set_footer(text=f"{timestamp}", icon_url="")  # Use the timestamp here
 
         # Send the embed to the log channel
         await log_channel.send(embed=embed)
     else:
         # Print an error message if the log channel is not found
         print(f"Log channel not found. Make sure the log_channel_id is set correctly.")
+
 
 # Event: When a message is edited
 @client.event
@@ -319,19 +333,24 @@ async def on_message_edit(before, after):
                 title="Message Edited",
                 color=0xf1c40f  # You can customize the color
             )
-            embed.add_field(name="User", value=f"{before.author.mention} ({before.author.id})", inline=False)
-            embed.add_field(name="Before", value=before.content, inline=False)
-            embed.add_field(name="After", value=after.content, inline=False)
+            
+            embed.add_field(name="Channel", value=f"{after.channel.mention} ({after.channel.name})", inline=False)
+            embed.add_field(name="Message ID", value=f"[{after.id}](https://discordapp.com/channels/{after.guild.id}/{after.channel.id}/{after.id})", inline=False)
+            embed.add_field(name="Message author:", value=f"{before.author.mention} ({before.author.id})", inline=False)
+
+            embed.add_field(name="Before", value=before.content, inline=True)
+            embed.add_field(name="After", value=after.content, inline=True)
 
             # Add the timestamp as a small field in the bottom left corner
             timestamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
-            embed.set_footer(text=timestamp, icon_url="")  # You can add an icon URL if needed
+            embed.set_footer(text=f"Timestamp: {timestamp}", icon_url="")  # Use the desired timestamp format
 
             # Send the embed to the log channel
             await log_channel.send(embed=embed)
         else:
             # Print an error message if the log channel is not found
             print(f"Log channel not found. Make sure the log_channel_id is set correctly.")
+
 
 # Function: Log a member role change event
 async def log_role_change(member, added_roles, client):
@@ -350,9 +369,15 @@ async def log_role_change(member, added_roles, client):
     if not os.path.exists(folder_path):
         os.makedirs(folder_path)
 
+    # Convert Role objects to strings
+    added_roles_str = [role.name for role in added_roles]
+
+    # Join the role names in the log message
+    roles_added_str = ', '.join(added_roles_str)
+
     # Log the role change details to the user's role change log file
     with open(file_path, "a") as file:
-        file.write(f"{timestamp} - User ID: {member_id}, Roles Added: {', '.join(added_roles)}\n")
+        file.write(f"{timestamp} - User ID: {member_id}, Roles Added: {roles_added_str}\n")
 
     # Send an embed to the log channel
     log_channel_id = logChannel  # Replace with the actual log channel ID
@@ -366,7 +391,7 @@ async def log_role_change(member, added_roles, client):
             color=0xffcc00  # Yellow color
         )
         embed.add_field(name="User", value=f"{member.mention} ({member_id})", inline=False)
-        embed.add_field(name="Roles Added", value=", ".join([f"<@&{role}>" for role in added_roles]), inline=False)
+        embed.add_field(name="Roles Added", value=", ".join([f"<@&{role.id}>" for role in added_roles]), inline=False)
         embed.add_field(name="Timestamp", value=timestamp, inline=False)
 
         # Send the embed to the log channel
@@ -375,8 +400,11 @@ async def log_role_change(member, added_roles, client):
         # Print an error message if the log channel is not found
         print(f"Log channel not found. Make sure the log_channel_id is set correctly.")
 
+# ==============================================================================
+# Commands
+# ==============================================================================
 
-
+# Commands: Kick ===============================================================
 
 # Command: Kick a member from the server
 @client.command()
@@ -405,6 +433,8 @@ async def kick(ctx, member: discord.Member, *, reason="Broke the rules"):
 async def kick_error(ctx, error):
     if isinstance(error, commands.MissingPermissions):
         await ctx.send("You do not have the permissions to use this command")
+
+# Commands: Ban ================================================================
 
 # Command: Ban a member from the server
 @client.command()
@@ -443,6 +473,8 @@ async def ban(ctx, member: discord.Member, *, reason="Broke the rules"):
 async def ban_error(ctx, error):
     if isinstance(error, commands.MissingPermissions):
         await ctx.send("You do not have the permissions to use this command")
+
+# Commands: Unban ==============================================================
 
 # Command: Unban a member from the server
 @client.command()
@@ -483,32 +515,47 @@ async def unban_error(ctx, error):
         await ctx.send("You do not have the permissions to use this command")
     elif isinstance(error, commands.MissingRequiredArgument):
         await ctx.send("Please provide the full username (including discriminator) or user ID of the user you want to unban.")
+        
+# Commands: note ===============================================================
+   
+@client.command()
+@commands.has_permissions(manage_messages=True)
+async def note(ctx, member: discord.Member, *, note):
+    # Add the note to the user's mod logs
+    add_note(member, f"{ctx.author.name} added a note: {note}")
 
-# Define a dictionary to store muted users and their unmute tasks
-muted_members = {}
+    # Send a DM to the user
+    try:
+        dm_channel = await member.create_dm()
+        await dm_channel.send(f"A note has been added to your mod logs in {ctx.guild.name if ctx.guild else 'the server'}: {note}")
+    except discord.Forbidden:
+        print(f"Failed to send a direct message to {member} (Forbidden).")
 
-# Function: Parse duration string into numeric value and unit
-def parse_duration(duration_str):
-    match = re.match(r"(\d+)\s*([smhdw]?)", duration_str)
-    if match:
-        value, unit = int(match.group(1)), match.group(2).lower()
-        return value, unit
-    return None, None
+    # Send a confirmation message
+    await ctx.send(f"Note added for {member.name}: {note}")
 
-# Function: Convert duration to seconds based on specified unit
-def convert_to_seconds(value, unit):
-    if unit == 's':
-        return value
-    elif unit == 'm':
-        return value * 60
-    elif unit == 'h':
-        return value * 60 * 60
-    elif unit == 'd':
-        return value * 24 * 60 * 60
-    elif unit == 'w':
-        return value * 7 * 24 * 60 * 60
-    else:
-        return None
+# Commands: Modlogs ============================================================
+
+# Command: Display mod logs for a user in an embed
+@client.command()
+@commands.has_permissions(manage_messages=True)
+async def modlogs(ctx, member: discord.Member):
+    # Create an embed object with a red color
+    embed = discord.Embed(
+        title=f"Mod Logs for {member.mention}",
+        color=0xe74c3c  # Red color
+    )
+
+    # Retrieve mod logs for the member
+    logs = get_mod_logs(member)
+
+    # Add mod logs to the embed
+    embed.add_field(name="Mod Logs", value=logs)
+
+    # Send the embed to the same channel
+    await ctx.send(embed=embed)
+
+# Commands: Mute ===============================================================
 
 # Command: Mute a member for a specified duration with an optional reason
 @client.command()
@@ -557,40 +604,7 @@ async def mute(ctx, member: discord.Member, *, duration_and_reason: str = None):
     else:
         await ctx.send("Please provide a duration for the mute.")
 
-# Function: Parse duration and reason from the input string
-def parse_duration_and_reason(input_str):
-    parts = input_str.split(maxsplit=1)
-
-    if len(parts) == 1:
-        return parts[0], None
-    elif len(parts) == 2:
-        return parts
-    else:
-        return None, None
-
-# Function: Automatically unmute a member after the specified duration
-async def auto_unmute(ctx, member, seconds):
-    await asyncio.sleep(seconds)
-    mute_role = discord.utils.get(ctx.guild.roles, name="Muted")
-
-    if mute_role in member.roles:
-        await member.remove_roles(mute_role)
-        await ctx.send(f"{member.mention} has been automatically unmuted after {seconds} seconds.")
-
-        # Log the automatic unmute in mod logs
-        log_punishment(ctx, member, "Unmute")
-
-        # Remove the user from the dictionary to avoid errors during manual unmute
-        if member.id in muted_members:
-            del muted_members[member.id]
-
-        # Send a DM to the unmuted member
-        try:
-            dm_channel = await member.create_dm()
-            await dm_channel.send(f"You have been automatically unmuted in {ctx.guild.name if ctx.guild else 'the server'} after {seconds} seconds.")
-        except discord.Forbidden:
-            print(f"Failed to send a direct message to {member} (Forbidden).")
-
+# Commands: Unmute =============================================================
 
 # Command: Unmute a member
 @client.command()
@@ -629,43 +643,8 @@ async def unmute_error(ctx, error):
     elif isinstance(error, commands.BadArgument):
         await ctx.send("Please provide a valid member for the unmute.")
 
-        
+# Commands: Warn ===============================================================
 
-# Define a function to add a note to a user's mod logs
-def add_note(member, note):
-    # Log the note
-    log_punishment(member, "Note", note)
-
-    # Add the note to the user's mod logs file
-    with open(f"{MODLOGS_FOLDER}/{member.name}/{member.name}_punishments.txt", "a") as file:
-        file.write(f"Note: {note}\n")
-
-@client.command()
-@commands.has_permissions(manage_messages=True)
-async def note(ctx, member: discord.Member, *, note):
-    # Add the note to the user's mod logs
-    add_note(member, f"{ctx.author.name} added a note: {note}")
-
-    # Send a DM to the user
-    try:
-        dm_channel = await member.create_dm()
-        await dm_channel.send(f"A note has been added to your mod logs in {ctx.guild.name if ctx.guild else 'the server'}: {note}")
-    except discord.Forbidden:
-        print(f"Failed to send a direct message to {member} (Forbidden).")
-
-    # Send a confirmation message
-    await ctx.send(f"Note added for {member.name}: {note}")
-    
-
-# Define a function to add a warning to a user's mod logs
-def add_warning(member, reason):
-    # Log the warning
-    log_punishment(member, "Warning", reason)
-
-    # Add the warning to the user's mod logs file
-    with open(f"{MODLOGS_FOLDER}/{member.name}/{member.name}_punishments.txt", "a") as file:
-        file.write(f"Warning: {reason}\n")
-        
 @client.command()
 @commands.has_permissions(manage_messages=True)
 async def warn(ctx, member: discord.Member, *, reason):
@@ -681,6 +660,8 @@ async def warn(ctx, member: discord.Member, *, reason):
 
     # Send a confirmation message
     await ctx.send(f"User {member.name} has been warned for: {reason}")
+
+# Commands: Send message =======================================================
 
 # Command: Send a message to a specific channel
 @client.command()
@@ -698,6 +679,8 @@ async def send_message(ctx, channel_id: int, *, message: str):
         # If the channel is not found, inform the user
         await ctx.send("Channel not found.")
 
+# Commands: Send direct message ================================================
+
 # Command: Send a direct message to a member
 @client.command()
 @commands.has_permissions(administrator=True)
@@ -713,3 +696,97 @@ async def send_dm(ctx, member_id: int, *, message: str):
     else:
         # If the member is not found, inform the user
         await ctx.send("Member not found.")
+
+# ==============================================================================
+# Other Functions
+# ==============================================================================
+
+# Define a dictionary to store muted users and their unmute tasks
+muted_members = {}
+
+# Functions: Parse duration ====================================================
+
+# Function: Parse duration string into numeric value and unit
+def parse_duration(duration_str):
+    match = re.match(r"(\d+)\s*([smhdw]?)", duration_str)
+    if match:
+        value, unit = int(match.group(1)), match.group(2).lower()
+        return value, unit
+    return None, None
+
+# Functions: Convert to seconds ================================================
+
+# Functions: Parse duration and reason =========================================
+
+# Function: Parse duration and reason from the input string
+def parse_duration_and_reason(input_str):
+    parts = input_str.split(maxsplit=1)
+
+    if len(parts) == 1:
+        return parts[0], None
+    elif len(parts) == 2:
+        return parts
+    else:
+        return None, None
+
+# Function: Convert duration to seconds based on specified unit
+def convert_to_seconds(value, unit):
+    if unit == 's':
+        return value
+    elif unit == 'm':
+        return value * 60
+    elif unit == 'h':
+        return value * 60 * 60
+    elif unit == 'd':
+        return value * 24 * 60 * 60
+    elif unit == 'w':
+        return value * 7 * 24 * 60 * 60
+    else:
+        return None
+
+# Functions: Automatically unmute ==============================================
+
+# Function: Automatically unmute a member after the specified duration
+async def auto_unmute(ctx, member, seconds):
+    await asyncio.sleep(seconds)
+    mute_role = discord.utils.get(ctx.guild.roles, name="Muted")
+
+    if mute_role in member.roles:
+        await member.remove_roles(mute_role)
+        await ctx.send(f"{member.mention} has been automatically unmuted after {seconds} seconds.")
+
+        # Log the automatic unmute in mod logs
+        log_punishment(ctx, member, "Unmute")
+
+        # Remove the user from the dictionary to avoid errors during manual unmute
+        if member.id in muted_members:
+            del muted_members[member.id]
+
+        # Send a DM to the unmuted member
+        try:
+            dm_channel = await member.create_dm()
+            await dm_channel.send(f"You have been automatically unmuted in {ctx.guild.name if ctx.guild else 'the server'} after {seconds} seconds.")
+        except discord.Forbidden:
+            print(f"Failed to send a direct message to {member} (Forbidden).")
+
+# Functions: Add note ==========================================================
+
+# Define a function to add a note to a user's mod logs
+def add_note(member, note):
+    # Log the note
+    log_punishment(member, "Note", note)
+
+    # Add the note to the user's mod logs file
+    with open(f"{MODLOGS_FOLDER}/{member.name}/{member.name}_punishments.txt", "a") as file:
+        file.write(f"Note: {note}\n")
+
+# Functions: Add warning =======================================================
+
+# Define a function to add a warning to a user's mod logs
+def add_warning(member, reason):
+    # Log the warningf
+    log_punishment(member, "Warning", reason)
+
+    # Add the warning to the user's mod logs file
+    with open(f"{MODLOGS_FOLDER}/{member.name}/{member.name}_punishments.txt", "a") as file:
+        file.write(f"Warning: {reason}\n")

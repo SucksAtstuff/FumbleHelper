@@ -401,6 +401,108 @@ async def log_role_change(member, added_roles, client):
         print(f"Log channel not found. Make sure the log_channel_id is set correctly.")
 
 # ==============================================================================
+# Other Functions
+# ==============================================================================
+
+# Define a dictionary to store muted users and their unmute tasks
+muted_members = {}
+
+# Functions: Parse duration ====================================================
+
+# Function: Parse duration string into numeric value and unit
+def parse_duration(duration_str):
+    match = re.match(r"(\d+)\s*([smhdw]?)", duration_str)
+    if match:
+        value, unit = int(match.group(1)), match.group(2).lower()
+        return value, unit
+    return None, None
+
+# Functions: Convert to seconds ================================================
+
+# Functions: Parse duration and reason =========================================
+
+# Function: Parse duration and reason from the input string
+def parse_duration_and_reason(input_str):
+    parts = input_str.split(maxsplit=1)
+
+    if len(parts) == 1:
+        return parts[0], None
+    elif len(parts) == 2:
+        return parts
+    else:
+        return None, None
+
+# Function: Convert duration to seconds based on specified unit
+def convert_to_seconds(value, unit):
+    if unit == 's':
+        return value
+    elif unit == 'm':
+        return value * 60
+    elif unit == 'h':
+        return value * 60 * 60
+    elif unit == 'd':
+        return value * 24 * 60 * 60
+    elif unit == 'w':
+        return value * 7 * 24 * 60 * 60
+    else:
+        return None
+
+# Functions: Automatically unmute ==============================================
+
+# Function: Automatically unmute a member after the specified duration
+async def auto_unmute(ctx, member, seconds):
+    await asyncio.sleep(seconds)
+    mute_role = discord.utils.get(ctx.guild.roles, name="Muted")
+
+    if mute_role in member.roles:
+        await member.remove_roles(mute_role)
+        await ctx.send(f"{member.mention} has been automatically unmuted after {seconds} seconds.")
+
+        # Log the automatic unmute in mod logs
+        log_punishment(ctx, member, "Unmute")
+
+        # Remove the user from the dictionary to avoid errors during manual unmute
+        if member.id in muted_members:
+            del muted_members[member.id]
+
+        # Send a DM to the unmuted member
+        try:
+            dm_channel = await member.create_dm()
+            await dm_channel.send(f"You have been automatically unmuted in {ctx.guild.name if ctx.guild else 'the server'} after {seconds} seconds.")
+        except discord.Forbidden:
+            print(f"Failed to send a direct message to {member} (Forbidden).")
+
+# Functions: Add note ==========================================================
+def add_note(ctx, member, note):
+    # Convert mention to member object
+    if isinstance(member, str):
+        member_id = int(member.replace('<@', '').replace('>', ''))
+        member = ctx.guild.get_member(member_id)
+
+    # Log the note
+    log_punishment(ctx, member, "Note", note)
+
+    # Add the note to the user's mod logs file
+    with open(f"{MODLOGS_FOLDER}/{member.name}/{member.name}_punishments.txt", "a") as file:
+        file.write(f"Note: {note}\n")
+        
+# Functions: Add warning =======================================================
+def add_warning(ctx, member, reason):
+    # Convert mention to member object
+    if isinstance(member, str):
+        member_id = int(member.replace('<@', '').replace('>', ''))
+        member = ctx.guild.get_member(member_id)
+
+    # Log the warning
+    log_punishment(ctx, member, "Warning", reason)
+
+    # Add the warning to the user's mod logs file
+    with open(f"{MODLOGS_FOLDER}/{member.name}/{member.name}_punishments.txt", "a") as file:
+        file.write(f"Warning: {reason}\n")
+
+
+
+# ==============================================================================
 # Commands
 # ==============================================================================
 
@@ -521,10 +623,9 @@ async def unban_error(ctx, error):
 @client.command()
 @commands.has_permissions(manage_messages=True)
 async def note(ctx, member: discord.Member, *, note):
-    add_note(ctx, member, note)
 
     # Send a confirmation message
-    await ctx.send(f"Note added for {member.name}: {note}")
+    await ctx.send(f"Note added for {member.mention}: {note}")
 
 # Commands: Modlogs ============================================================
 
@@ -640,8 +741,6 @@ async def unmute_error(ctx, error):
 @client.command()
 @commands.has_permissions(manage_messages=True)
 async def warn(ctx, member: discord.Member, *, reason):
-    add_warning(ctx, member, reason)
-
     # Send a DM to the warned user
     try:
         dm_channel = await member.create_dm()
@@ -650,7 +749,7 @@ async def warn(ctx, member: discord.Member, *, reason):
         print(f"Failed to send a direct message to {member} (Forbidden).")
 
     # Send a confirmation message
-    await ctx.send(f"User {member.name} has been warned for: {reason}")
+    await ctx.send(f"User {member.mention} has been warned for: {reason}")
 
 # Commands: Send message =======================================================
 
@@ -683,108 +782,9 @@ async def send_dm(ctx, member_id: int, *, message: str):
         # Send a direct message to the member
         await member.send(message)
         # Send a confirmation message to the command invoker
-        await ctx.send(f"Direct message sent to {member.name}: {message}")
+        await ctx.send(f"Direct message sent to {member.mention}: {message}")
     else:
         # If the member is not found, inform the user
         await ctx.send("Member not found.")
 
-# ==============================================================================
-# Other Functions
-# ==============================================================================
 
-# Define a dictionary to store muted users and their unmute tasks
-muted_members = {}
-
-# Functions: Parse duration ====================================================
-
-# Function: Parse duration string into numeric value and unit
-def parse_duration(duration_str):
-    match = re.match(r"(\d+)\s*([smhdw]?)", duration_str)
-    if match:
-        value, unit = int(match.group(1)), match.group(2).lower()
-        return value, unit
-    return None, None
-
-# Functions: Convert to seconds ================================================
-
-# Functions: Parse duration and reason =========================================
-
-# Function: Parse duration and reason from the input string
-def parse_duration_and_reason(input_str):
-    parts = input_str.split(maxsplit=1)
-
-    if len(parts) == 1:
-        return parts[0], None
-    elif len(parts) == 2:
-        return parts
-    else:
-        return None, None
-
-# Function: Convert duration to seconds based on specified unit
-def convert_to_seconds(value, unit):
-    if unit == 's':
-        return value
-    elif unit == 'm':
-        return value * 60
-    elif unit == 'h':
-        return value * 60 * 60
-    elif unit == 'd':
-        return value * 24 * 60 * 60
-    elif unit == 'w':
-        return value * 7 * 24 * 60 * 60
-    else:
-        return None
-
-# Functions: Automatically unmute ==============================================
-
-# Function: Automatically unmute a member after the specified duration
-async def auto_unmute(ctx, member, seconds):
-    await asyncio.sleep(seconds)
-    mute_role = discord.utils.get(ctx.guild.roles, name="Muted")
-
-    if mute_role in member.roles:
-        await member.remove_roles(mute_role)
-        await ctx.send(f"{member.mention} has been automatically unmuted after {seconds} seconds.")
-
-        # Log the automatic unmute in mod logs
-        log_punishment(ctx, member, "Unmute")
-
-        # Remove the user from the dictionary to avoid errors during manual unmute
-        if member.id in muted_members:
-            del muted_members[member.id]
-
-        # Send a DM to the unmuted member
-        try:
-            dm_channel = await member.create_dm()
-            await dm_channel.send(f"You have been automatically unmuted in {ctx.guild.name if ctx.guild else 'the server'} after {seconds} seconds.")
-        except discord.Forbidden:
-            print(f"Failed to send a direct message to {member} (Forbidden).")
-
-# Functions: Add note ==========================================================
-def add_note(ctx, member, note):
-    # Convert mention to member object
-    if isinstance(member, str):
-        member_id = int(member.replace('<@', '').replace('>', ''))
-        member = ctx.guild.get_member(member_id)
-
-    # Log the note
-    log_punishment(ctx, member, "Note", note)
-
-    # Add the note to the user's mod logs file
-    with open(f"{MODLOGS_FOLDER}/{member.name}/{member.name}_punishments.txt", "a") as file:
-        file.write(f"Note: {note}\n")
-        
-# Functions: Add warning =======================================================
-# Functions: Add warning =======================================================
-def add_warning(ctx, member, reason):
-    # Convert mention to member object
-    if isinstance(member, str):
-        member_id = int(member.replace('<@', '').replace('>', ''))
-        member = ctx.guild.get_member(member_id)
-
-    # Log the warning
-    log_punishment(ctx, member, "Warning", reason)
-
-    # Add the warning to the user's mod logs file
-    with open(f"{MODLOGS_FOLDER}/{member.name}/{member.name}_punishments.txt", "a") as file:
-        file.write(f"Warning: {reason}\n")

@@ -11,6 +11,9 @@ import re
 import datetime
 import os
 
+# Import the Flask app
+from web_app import app as web_app
+
 appealLink = "https://forms.gle/rMdFUi5J8uHqf4jV9" 
 welcomeChannel = 1173380031230259200
 farewellChannel = 1173384679471202375
@@ -33,6 +36,9 @@ client = commands.Bot(command_prefix="!", intents=intents)
 async def on_ready():
     print(f"{client.user} is now online")
     print("-------------------------")
+    
+    # Run the web application when the bot is ready
+    web_app.run()
 
 # Functions: Open slur list ====================================================
 
@@ -786,5 +792,3 @@ async def send_dm(ctx, member_id: int, *, message: str):
     else:
         # If the member is not found, inform the user
         await ctx.send("Member not found.")
-
-

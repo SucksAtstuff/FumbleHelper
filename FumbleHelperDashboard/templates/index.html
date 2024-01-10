@@ -1,0 +1,65 @@
+<!-- templates/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+
+    <style>
+        /* Add CSS styles for the round buttons */
+        .server-button {
+            display: inline-block;
+            margin: 10px;
+            border: none;
+            border-radius: 50%;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .server-icon {
+            width: 100%; /* Adjust the size as needed */
+            height: 100%; /* Adjust the size as needed */
+            object-fit: cover;
+            border-radius: 50%;
+        }
+
+        .server-name {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    {% if user_id %}
+        <h1>Welcome, User ID: {{ user_id }}</h1>
+        {% if user_guilds %}
+            <div>
+                {% for guild in user_guilds %}
+                    <a href='/configure/{{ guild['name'] }}'>
+                        <div class="server-button">
+                            {% if guild['icon_url'] %}
+                                <img class="server-icon" src="{{ guild['icon_url'] }}" alt="{{ guild['name'] }} Icon">
+                            {% else %}
+                                <!-- Use default image and display server name -->
+                                <img class="server-icon" src="{{ url_for('static', filename='FumbleHelperDashboard/images/default.png') }}" alt="{{ guild['name'] }} Icon">
+                                <div class="server-name">{{ guild['name'] }}</div>
+                            {% endif %}
+                        </div>
+                    </a>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p>No servers available</p>
+        {% endif %}
+    {% else %}
+        <p>Please log in</p>
+    {% endif %}
+</body>
+</html>
